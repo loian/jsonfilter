@@ -1,60 +1,35 @@
-package main
+package jsonfilter
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
-type T3 struct {
-	Visa  string `json:"visa"`
-	Notes string `json:"note"`
+type JsonFilter struct {
+	buffer   map[string]interface{}
+	jsonData []byte
+	policy *Grants
 }
 
-type T2 struct {
-	Notice int `json:"notice"`
-	Salary int `json:"salary"`
-	Wp     T3  `json:"wp"`
-}
-
-type T1 struct {
-	Name         string `json:"name"`
-	Id           string `json:"id"'`
-	Expectations T2     `json:"expectations"`
-}
-
-var t T1 = T1{
-	Name: "mikhail",
-	Id:   "1123jj1hh123",
-	Expectations: T2{
-		Notice: 3,
-		Salary: 60000,
-		Wp: T3{
-			Visa:  "tier2",
-			Notes: "foobar",
-		},
-	},
-}
-
-func access(data map[string]interface{}, keys []string) map[string]interface{} {
+func (jf *JsonFilter) access(data map[string]interface{}, keys []string) map[string]interface{} {
 	tmp, ok := data[keys[0]].(map[string]interface{})
 	if !ok {
 		return nil
 	}
 	if len(keys) > 1 {
-		return access(tmp, keys[1:])
+		return jf.access(tmp, keys[1:])
 	}
 	return tmp
 }
 
-func remove(data map[string]interface{}, path []string) {
+func (jf *JsonFilter) remove(path []string) {
 	if len(path) > 1 {
-		delete(access(data, path[:len(path)-1]), path[len(path)-1])
+		delete(jf.access(jf.buffer, path[:len(path)-1]), path[len(path)-1])
 	} else {
-		delete(data, path[0])
+		delete(jf.buffer, path[0])
 	}
 }
 
-func isDenied(role string, roles []string, action string) bool {
+func (jf *JsonFilter) isDenied(role string, roles []string, action string) bool {
 
 	found := false
 
@@ -72,26 +47,20 @@ func isDenied(role string, roles []string, action string) bool {
 }
 
 
-func filter(policyFile string, role string, jsonData []byte) ([]byte, error){
+func (jf *JsonFilter) Filter(role string) ([]byte, error){
 
-	policy, err := readConfig(policyFile)
+	err := json.Unmarshal(jf.jsonData, &jf.buffer)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	var mp map[string]interface{}
-	err = json.Unmarshal([]byte(jsonData), &mp)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	for _, grant := range policy.Grants {
-		if isDenied(role, grant.Roles, grant.Action) {
-			remove(mp, grant.Path)
+	for _, grant := range jf.policy.Grants {
+		if jf.isDenied(role, grant.Roles, grant.Action) {
+			jf.remove( grant.Path)
 		}
 	}
 
-	j, err := json.Marshal(mp)
+	j, err := json.Marshal(jf.buffer)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -99,8 +68,26 @@ func filter(policyFile string, role string, jsonData []byte) ([]byte, error){
 	return j, nil
 }
 
-func main() {
-	j, _ := json.Marshal(t)
-	filteredJson, _ := filter("grants.json", "guest", j)
-	fmt.Println(string(filteredJson))
+func New (jsonData []byte, policy *Grants) JsonFilter{
+	buffer := make(map[string]interface{})
+
+	return JsonFilter{
+		buffer: buffer,
+		jsonData: jsonData,
+		policy: policy,
+	}
+}
+
+func NewFromFile (jsonData []byte, policyFile string) (JsonFilter, error) {
+	buffer := make(map[string]interface{})
+	policy, err := readConfig(policyFile)
+	if err!=nil {
+		return JsonFilter{}, err
+	}
+	return JsonFilter{
+		buffer: buffer,
+		jsonData: jsonData,
+		policy: policy,
+	},
+	nil
 }
