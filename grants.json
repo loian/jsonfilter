@@ -1,0 +1,14 @@
+{
+  "grants": [
+    {
+      "path" : ["name"],
+      "roles" : ["guest", "reviewer"],
+      "action" : "deny"
+    },
+    {
+      "path" : ["expectations","wp","note"],
+      "roles" : ["guest", "reviewer"],
+      "action" : "deny"
+    }
+  ]
+}
