@@ -1,4 +1,4 @@
-module json_filter
+module jsonfilter
 
 go 1.16
 
