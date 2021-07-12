@@ -42,6 +42,18 @@ var denyNameToGuestAndUser Grant = Grant{
 	Action: "deny",
 }
 
+var denyNameToGuest Grant = Grant{
+	Path:   []string{"name"},
+	Roles:  []string{"guest"},
+	Action: "deny",
+}
+
+var allowNameToGuest Grant = Grant{
+	Path:   []string{"name"},
+	Roles:  []string{"user"},
+	Action: "deny",
+}
+
 var denyAccessToAWholeObject Grant = Grant{
 	Path:   []string{"expectations", "wp"},
 	Roles:  []string{"guest", "user"},
@@ -66,11 +78,15 @@ var policyAllow Grants = Grants{
 	[]Grant{allowNameToUser},
 }
 
+var policyDenyAllow Grants = Grants {
+	[]Grant{denyNameToGuestAndUser, allowNameToUser},
+}
+
 func TestJsonFilter_DoNotFiter(t *testing.T) {
 	j, _ := json.Marshal(mockData)
 
 	myFilter := New(j, policyFilterFirstrLevel)
-	json, _ := myFilter.Filter("superadmin")
+	json, _ := myFilter.Filter([]string{"superadmin"})
 
 	ja := jsonassert.New(t)
 	ja.Assertf(string(j), string(json))
@@ -82,14 +98,14 @@ func TestJsonFilter_FilterFirstLevelWithTwoRoles(t *testing.T) {
 	j, _ := json.Marshal(mockData)
 
 	myFilter := New(j, policyFilterFirstrLevel)
-	filteredJson, _ := myFilter.Filter("user")
+	filteredJson, _ := myFilter.Filter([]string{"user"})
 	ja := jsonassert.New(t)
 
 	ja.Assertf(
 		`{"expectations":{"notice":3,"salary":60000,"wp":{"note":"foobar","visa":"tier2"}},"id":"1123jj1hh123"}`,
 		string(filteredJson))
 
-	filteredJson, _ = myFilter.Filter("guest")
+	filteredJson, _ = myFilter.Filter([]string{"guest"})
 	ja.Assertf(
 		`{"expectations":{"notice":3,"salary":60000,"wp":{"note":"foobar","visa":"tier2"}},"id":"1123jj1hh123"}`,
 		string(filteredJson))
@@ -100,7 +116,7 @@ func TestJsonFilter_FilterBlock(t *testing.T) {
 	j, _ := json.Marshal(mockData)
 
 	myFilter := New(j, policyFilterBlock)
-	filteredJson, _ := myFilter.Filter("user")
+	filteredJson, _ := myFilter.Filter([]string{"user"})
 	ja := jsonassert.New(t)
 
 	ja.Assertf(
@@ -108,7 +124,7 @@ func TestJsonFilter_FilterBlock(t *testing.T) {
 `,
 		string(filteredJson))
 
-	filteredJson, _ = myFilter.Filter("guest")
+	filteredJson, _ = myFilter.Filter([]string{"guest"})
 	ja.Assertf(
 		`{"expectations":{"notice":3,"salary":60000},"id":"1123jj1hh123","name":"mikhail"}`,
 		string(filteredJson))
@@ -119,15 +135,28 @@ func TestJsonFilter_AllowField(t *testing.T) {
 	j, _ := json.Marshal(mockData)
 
 	myFilter := New(j, policyAllow)
-	filteredJson, _ := myFilter.Filter("user")
+	filteredJson, _ := myFilter.Filter([]string{"user"})
 	ja := jsonassert.New(t)
 
 	ja.Assertf(
 		`{"expectations":{"notice":3,"salary":60000,"wp":{"note":"foobar","visa":"tier2"}},"id":"1123jj1hh123","name":"mikhail"}`,
 		string(filteredJson))
 
-	filteredJson, _ = myFilter.Filter("guest")
+	filteredJson, _ = myFilter.Filter([]string{"guest"})
 	ja.Assertf(
 		`{"expectations":{"notice":3,"salary":60000,"wp":{"note":"foobar","visa":"tier2"}},"id":"1123jj1hh123"}`,
+		string(filteredJson))
+}
+
+func TestJsonFilter_OneDenyOneAllow(t *testing.T) {
+	//prepare a mock json
+	j, _ := json.Marshal(mockData)
+
+	myFilter := New(j, policyDenyAllow)
+	filteredJson, _ := myFilter.Filter([]string{"user", "guest"})
+	ja := jsonassert.New(t)
+
+	ja.Assertf(
+		`{"expectations":{"notice":3,"salary":60000,"wp":{"note":"foobar","visa":"tier2"}},"id":"1123jj1hh123","name":"mikhail"}`,
 		string(filteredJson))
 }

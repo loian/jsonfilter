@@ -2,7 +2,21 @@ package jsonfilter
 
 import (
 	"encoding/json"
+	"fmt"
 )
+
+type filterDescriptor struct {
+	filter bool
+	path []string
+}
+
+func key(path []string) string {
+	out := ""
+	for _,p := range path {
+		out += " " + p
+	}
+	return out
+}
 
 type JsonFilter struct {
 	buffer   map[string]interface{}
@@ -46,7 +60,9 @@ func (jf *JsonFilter) isDenied(role string, roles []string, action string) bool 
 	}
 }
 
-func (jf *JsonFilter) Filter(role string) ([]byte, error) {
+func (jf *JsonFilter) Filter(roles []string) ([]byte, error) {
+
+	filterMap := make(map[string]filterDescriptor)
 
 	err := json.Unmarshal(jf.jsonData, &jf.buffer)
 	if err != nil {
@@ -54,10 +70,24 @@ func (jf *JsonFilter) Filter(role string) ([]byte, error) {
 	}
 
 	for _, grant := range jf.policy.Grants {
-		if jf.isDenied(role, grant.Roles, grant.Action) {
-			jf.remove(grant.Path)
+		if _, ok := filterMap[key(grant.Path)]; !ok {
+			filterMap[key(grant.Path)] = filterDescriptor{false, grant.Path}
+		}
+
+		for _, userRole  := range roles {
+			if !jf.isDenied(userRole, grant.Roles, grant.Action) {
+				filterMap[key(grant.Path)] = filterDescriptor{true, grant.Path}
+			}
 		}
 	}
+
+	fmt.Println(filterMap)
+	for _, filters := range filterMap {
+		if filters.filter == false {
+			jf.remove(filters.path)
+		}
+	}
+
 
 	j, err := json.Marshal(jf.buffer)
 	if err != nil {
