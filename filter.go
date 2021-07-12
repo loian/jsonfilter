@@ -2,17 +2,16 @@ package jsonfilter
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 type filterDescriptor struct {
 	filter bool
-	path []string
+	path   []string
 }
 
 func key(path []string) string {
 	out := ""
-	for _,p := range path {
+	for _, p := range path {
 		out += " " + p
 	}
 	return out
@@ -74,20 +73,18 @@ func (jf *JsonFilter) Filter(roles []string) ([]byte, error) {
 			filterMap[key(grant.Path)] = filterDescriptor{false, grant.Path}
 		}
 
-		for _, userRole  := range roles {
+		for _, userRole := range roles {
 			if !jf.isDenied(userRole, grant.Roles, grant.Action) {
 				filterMap[key(grant.Path)] = filterDescriptor{true, grant.Path}
 			}
 		}
 	}
 
-	fmt.Println(filterMap)
 	for _, filters := range filterMap {
 		if filters.filter == false {
 			jf.remove(filters.path)
 		}
 	}
-
 
 	j, err := json.Marshal(jf.buffer)
 	if err != nil {
