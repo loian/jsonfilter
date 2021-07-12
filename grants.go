@@ -15,7 +15,7 @@ type Grants struct {
 	Grants []Grant `json:"grants"`
 }
 
-func readConfig(path string) (*Grants, error) {
+func readConfig(path string) (Grants, error) {
 	//TODO: some sanitisation of the path
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -26,8 +26,8 @@ func readConfig(path string) (*Grants, error) {
 
 	err = json.Unmarshal([]byte(file), &data)
 	if err != nil {
-		return nil, err
+		return Grants{}, err
 	}
 
-	return &data, nil
+	return data, nil
 }

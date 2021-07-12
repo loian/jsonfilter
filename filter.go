@@ -7,7 +7,7 @@ import (
 type JsonFilter struct {
 	buffer   map[string]interface{}
 	jsonData []byte
-	policy *Grants
+	policy   Grants
 }
 
 func (jf *JsonFilter) access(data map[string]interface{}, keys []string) map[string]interface{} {
@@ -34,8 +34,8 @@ func (jf *JsonFilter) isDenied(role string, roles []string, action string) bool 
 	found := false
 
 	for _, r := range roles {
-		if r==role {
-			found = true;
+		if r == role {
+			found = true
 		}
 	}
 
@@ -46,8 +46,7 @@ func (jf *JsonFilter) isDenied(role string, roles []string, action string) bool 
 	}
 }
 
-
-func (jf *JsonFilter) Filter(role string) ([]byte, error){
+func (jf *JsonFilter) Filter(role string) ([]byte, error) {
 
 	err := json.Unmarshal(jf.jsonData, &jf.buffer)
 	if err != nil {
@@ -56,7 +55,7 @@ func (jf *JsonFilter) Filter(role string) ([]byte, error){
 
 	for _, grant := range jf.policy.Grants {
 		if jf.isDenied(role, grant.Roles, grant.Action) {
-			jf.remove( grant.Path)
+			jf.remove(grant.Path)
 		}
 	}
 
@@ -68,26 +67,26 @@ func (jf *JsonFilter) Filter(role string) ([]byte, error){
 	return j, nil
 }
 
-func New (jsonData []byte, policy *Grants) JsonFilter{
+func New(jsonData []byte, policy Grants) JsonFilter {
 	buffer := make(map[string]interface{})
 
 	return JsonFilter{
-		buffer: buffer,
+		buffer:   buffer,
 		jsonData: jsonData,
-		policy: policy,
+		policy:   policy,
 	}
 }
 
-func NewFromFile (jsonData []byte, policyFile string) (JsonFilter, error) {
+func NewFromFile(jsonData []byte, policyFile string) (JsonFilter, error) {
 	buffer := make(map[string]interface{})
 	policy, err := readConfig(policyFile)
-	if err!=nil {
+	if err != nil {
 		return JsonFilter{}, err
 	}
 	return JsonFilter{
-		buffer: buffer,
-		jsonData: jsonData,
-		policy: policy,
-	},
-	nil
+			buffer:   buffer,
+			jsonData: jsonData,
+			policy:   policy,
+		},
+		nil
 }
