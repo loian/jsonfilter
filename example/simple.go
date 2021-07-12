@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	jsonfilter "json_filter"
+	jsonfilter "jsonfilter"
 )
 
 type T3 struct {
