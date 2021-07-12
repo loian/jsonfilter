@@ -1,4 +1,4 @@
-module jsonfilter
+module github.com/loian/jsonfilter
 
 go 1.16
 
